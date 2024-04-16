@@ -31,7 +31,9 @@ app.MapGet("/{question}", (string question) =>
         {
             case "Hello":
                 return new { Message = "Hello, how can I assist you?" };
-        }
+            case "my head hurts":
+                         return new { Message = "I'm sorry to hear that your head hurts. Headaches can be really uncomfortable. Have you tried anything to relieve it, like drinking water, resting in a quiet and dark room, or maybe taking some pain relief medication? If it persists or gets worse, it might be a good idea to consult a healthcare professional." };
+                 }
         return null;
     }).WithDescription("Some Method Description")
     .WithOpenApi();
