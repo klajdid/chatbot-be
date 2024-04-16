@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "BVO8e+8QaBvEfqx99P9FfGBtM7MdQANIleXWtM8/hnE=",
+  "Source": "chatbot-mock-be",
+  "BasePath": "_content/chatbot-mock-be",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
