@@ -25,10 +25,23 @@ public class ChatController : ControllerBase
         return await _channel.ReceiveMessage(message);
     }
     
-    [HttpGet("initialize-chat")]
-    public IActionResult InitializeChat()
+    [HttpPost("initialize-chat")]
+    public async Task<ActionResult> InitializeChat([FromBody] ConfigurationRequestDto configReq)
     {
-        var configData = _config.GetConfigData();
+        var configData = await _config.GetConfigData(configReq);
         return Ok(configData);
+    }
+    
+    [HttpPost("delete-chat")]
+    public async Task<ActionResult> DeleteChat([FromBody] ConfigurationRequestDto configReq)
+    {
+        var configData = await _channel.DeleteChat(configReq);
+        return Ok(configData);
+    }
+    
+    [HttpPost("start-chat")]
+    public async Task<ActionResult>  StartChat([FromBody] Message message)
+    {
+        return await _channel.ReceiveMessage(message);
     }
 }

@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
 using chatbot_mock_be.Data.Enum;
+using chatbot_mock_be.Dto;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using StreamChat.Clients;
 using StreamChat.Models;
@@ -15,7 +17,7 @@ public class WebChannel : Channel
     private readonly ChannelRequest _chanData;
     public WebChannel()
     { 
-      _factory = new StreamClientFactory("h5y3ytpvzcyn", "37ruxfmkmayw767wkgsxq6wj6w4fhxdjw65k3b6p6favqn9rx6w4zhqg25psyuc5");
+      _factory = new StreamClientFactory("sjd3wynvqdpz", "njbw4qn9phrmhsybd6jq76y2rtcm8nu2uchr265mktanrysnancp3s3kcz4xkn8s");
       _messageClient = _factory.GetMessageClient();
       _channelClient = _factory.GetChannelClient(); // Get the Channel Client
       _chanData = new ChannelRequest { CreatedBy = new UserRequest { Id = "crimson-hat-9" } };
@@ -62,6 +64,14 @@ public class WebChannel : Channel
         return new OkResult();
     }
 
+    public async Task<ActionResult> DeleteChat(ConfigurationRequestDto requestDto)
+    {
+        if (!string.IsNullOrEmpty(requestDto.ChannelId))
+            await _channelClient.DeleteAsync("messaging", requestDto.ChannelId);
+
+        return new OkResult();
+    }
+
     public Message SendMessage()
     {
         return new Message();
@@ -91,6 +101,8 @@ public class WebChannel : Channel
                     return $"<strong>{lastResponse}</strong>";
                 }
                 return "No previous message to bold.";
+            case "firstmessage":
+                return "Hello there";
             default:
                 lastResponse = string.Empty;
                 break;
