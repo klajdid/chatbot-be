@@ -1,6 +1,4 @@
 using chatbot_mock_be.Dto;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
 using StreamChat.Clients;
 using StreamChat.Models;
 
@@ -16,12 +14,11 @@ public class ConfigService
 
     public ConfigService(IConfiguration configuration)
     {
-        _factory = new StreamClientFactory("sjd3wynvqdpz",
-            "njbw4qn9phrmhsybd6jq76y2rtcm8nu2uchr265mktanrysnancp3s3kcz4xkn8s");
-        _messageClient = _factory.GetMessageClient();
-        _channelClient = _factory.GetChannelClient(); // Get the Channel Client
-        _userClient = _factory.GetUserClient(); // Get the Channel Client
         _configuration = configuration;
+        _factory = new StreamClientFactory(_configuration["Configurations:ApiKey"], _configuration["Configurations:ApiSecret"]);
+        _messageClient = _factory.GetMessageClient();
+        _channelClient = _factory.GetChannelClient();
+        _userClient = _factory.GetUserClient();
     }
 
     public async Task<ConfigurationDto> GetConfigData(ConfigurationRequestDto configReq)

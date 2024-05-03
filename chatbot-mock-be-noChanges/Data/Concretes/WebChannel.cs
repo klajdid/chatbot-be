@@ -14,22 +14,15 @@ public class WebChannel : Channel
     private readonly IMessageClient _messageClient;
     private readonly IChannelClient _channelClient;
     private readonly IUserClient _userClient;
+    private readonly IConfiguration _configuration;
     private readonly string adminUser = "joni-shpk";
-    private readonly ChannelRequest _chanData;
-    public WebChannel()
-    { 
-      _factory = new StreamClientFactory("sjd3wynvqdpz", "njbw4qn9phrmhsybd6jq76y2rtcm8nu2uchr265mktanrysnancp3s3kcz4xkn8s");
+    public WebChannel(IConfiguration configuration)
+    {
+        _configuration = configuration;
+      _factory = new StreamClientFactory(_configuration["Configurations:ApiKey"], _configuration["Configurations:ApiSecret"]);
       _messageClient = _factory.GetMessageClient();
       _channelClient = _factory.GetChannelClient(); // Get the Channel Client
       _userClient = _factory.GetUserClient(); // Get the Channel Client
-      _chanData = new ChannelRequest { CreatedBy = new UserRequest { Id = "crimson-hat-9" } };
-      var user = new UserRequest
-      {
-          Id = "bob-1",
-          Role = Role.User,
-      };
-      user.SetData("prova", "datademo");
-
     }
     public ChannelID GetID()
     {

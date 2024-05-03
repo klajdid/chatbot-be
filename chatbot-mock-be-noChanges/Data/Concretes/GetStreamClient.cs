@@ -53,15 +53,15 @@ public class GetStreamClient : IGetStreamClient
         switch (statusCode)
         {
             case 200:
-                return new OkObjectResult(message); // Assuming Ok() returns a 200 OK response with the provided message
+                return new OkObjectResult(message);
             case 400:
-                return new BadRequestObjectResult(message); // Assuming BadRequest() returns a 400 Bad Request response with the provided message
+                return new BadRequestObjectResult(message);
             case 404:
-                return new NotFoundObjectResult(message); // Assuming NotFound() returns a 404 Not Found response with the provided message
+                return new NotFoundObjectResult(message);
             case 500:
-                return StatusCode(500, message); // Assuming StatusCode() returns a generic 500 Internal Server Error response with the provided message
+                return StatusCode(500, message);
             default:
-                return new StatusCodeResult(statusCode); // Returning a generic status code result with the provided status code
+                return new StatusCodeResult(statusCode);
         }
     }
 
@@ -84,4 +84,3 @@ internal class MessageClientFactory
     //     return new MessageClient(client);
     // }
 }
-
