@@ -13,6 +13,7 @@ public class WebChannel : Channel
     private readonly StreamClientFactory _factory;
     private readonly IMessageClient _messageClient;
     private readonly IChannelClient _channelClient;
+    private readonly IUserClient _userClient;
     private readonly string adminUser = "joni-shpk";
     private readonly ChannelRequest _chanData;
     public WebChannel()
@@ -20,6 +21,7 @@ public class WebChannel : Channel
       _factory = new StreamClientFactory("sjd3wynvqdpz", "njbw4qn9phrmhsybd6jq76y2rtcm8nu2uchr265mktanrysnancp3s3kcz4xkn8s");
       _messageClient = _factory.GetMessageClient();
       _channelClient = _factory.GetChannelClient(); // Get the Channel Client
+      _userClient = _factory.GetUserClient(); // Get the Channel Client
       _chanData = new ChannelRequest { CreatedBy = new UserRequest { Id = "crimson-hat-9" } };
       var user = new UserRequest
       {
@@ -66,10 +68,13 @@ public class WebChannel : Channel
 
     public async Task<ActionResult> DeleteChat(ConfigurationRequestDto requestDto)
     {
+        if (!string.IsNullOrEmpty(requestDto.UserId))
+            await _userClient.DeleteAsync(requestDto.UserId, markMessagesDeleted: true, hardDelete: true, deleteConversations: true);
+
         if (!string.IsNullOrEmpty(requestDto.ChannelId))
             await _channelClient.DeleteAsync("messaging", requestDto.ChannelId);
 
-        return new OkResult();
+        return new OkObjectResult(200);
     }
 
     public Message SendMessage()
@@ -102,7 +107,7 @@ public class WebChannel : Channel
                 }
                 return "No previous message to bold.";
             case "firstmessage":
-                return "Hello there";
+                return "Hello there from DATAWIZ";
             default:
                 lastResponse = string.Empty;
                 break;

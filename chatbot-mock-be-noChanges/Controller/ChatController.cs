@@ -21,7 +21,6 @@ public class ChatController : ControllerBase
     [HttpPost("Message-Management")]
     public async Task<ActionResult> MessageManagement([FromBody] Message message)
     {
-        Console.WriteLine(message.UserId);
         return await _channel.ReceiveMessage(message);
     }
     
@@ -35,8 +34,8 @@ public class ChatController : ControllerBase
     [HttpPost("delete-chat")]
     public async Task<ActionResult> DeleteChat([FromBody] ConfigurationRequestDto configReq)
     {
-        var configData = await _channel.DeleteChat(configReq);
-        return Ok(configData);
+        await _channel.DeleteChat(configReq);
+        return Ok();
     }
     
     [HttpPost("start-chat")]
