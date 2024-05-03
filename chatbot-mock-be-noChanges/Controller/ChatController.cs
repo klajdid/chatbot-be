@@ -44,4 +44,22 @@ public class ChatController : ControllerBase
     {
         return await _channel.ReceiveMessage(message);
     }
+    
+    [HttpPost("/webhooks/getstream")]
+    public IActionResult HandleGetStreamEvent([FromBody] GetStreamEvent request)
+    {
+        if (request.Type == "message_click") 
+        {
+            // Handle message click event
+            string messageId = request.MessageId;
+            Console.WriteLine(messageId);
+        }
+            
+        return Ok();
+    }
+    public class GetStreamEvent
+    {
+        public string Type { get; set; }
+        public string MessageId { get; set; }
+    }
 }
