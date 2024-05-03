@@ -43,28 +43,39 @@ public class WebChannel : Channel
 
     public async Task<ActionResult> ReceiveMessage(Message mess)
     {
-        if (!mess.UserId.Equals(adminUser))
+        if (mess.UserId != adminUser)
         {
             var botMessage = BotMessage(mess.Text.ToLower());
-            if (!string.IsNullOrEmpty(botMessage))
+            if (botMessage != null)
             {
-                // var messageClient = _factory.GetMessageClient();
-                var toBeSent = new MessageRequest
+                if (botMessage is string)
                 {
-                    Text = botMessage,
-                    HTML = "<p>HELLO<p>"
-                };
-                
-                var channelId = new ChannelID(mess.ChannelId);
-                Console.WriteLine(mess.Text);
-                Console.WriteLine(mess.UserId);
-                
-                await _messageClient.SendMessageAsync(mess.Type, mess.ChannelId, toBeSent, adminUser);
-                return new OkResult();
+                    // Sending a string message
+                    var toBeSent = new MessageRequest
+                    {
+                        Text = (string)botMessage
+                    };
+                    await _messageClient.SendMessageAsync(mess.Type, mess.ChannelId, toBeSent, adminUser);
+                }
+                else if (botMessage is IEnumerable<string>)
+                {
+                    // Sending a list of URLs
+                    var urls = (IEnumerable<string>)botMessage;
+                    foreach (var url in urls)
+                    {
+                        var toBeSent = new MessageRequest
+                        {
+                            Text = url
+                        };
+                        await _messageClient.SendMessageAsync(mess.Type, mess.ChannelId, toBeSent, adminUser);
+                    }
+                }
             }
         }
-        return new OkResult();
+        return new OkObjectResult(200);
     }
+
+
 
     public async Task<ActionResult> DeleteChat(ConfigurationRequestDto requestDto)
     {
@@ -84,7 +95,7 @@ public class WebChannel : Channel
 
     private static string lastResponse = string.Empty;
 
-    private string BotMessage(string userMessage)
+    private Object BotMessage(string userMessage)
     {
         // Check if the user message requests the response to be in bold
         bool makeBold = userMessage.ToLower().Contains("bold");
@@ -100,6 +111,10 @@ public class WebChannel : Channel
             case "my head hurts":
                 lastResponse = "I'm sorry to hear that your head hurts. Headaches can be really uncomfortable. Have you tried anything to relieve it, like drinking water, resting in a quiet and dark room, or maybe taking some pain relief medication? If it persists or gets worse, it might be a good idea to consult a healthcare professional.";
                 break;
+            case "show me the list of hospitals test":
+                return new List<string>() { "https://al.spitaliamerikan.com/en/","https://al.spitaliamerikan.com/en/" };
+            case "show me the list of hospitals":
+                return $"<ul><li><a href=\"https://salus.al/?lang=en\" target=\"_blank\">Salus</a></li><li><a href=\"https://hygeia.al/\" target=\"_blank\">Hygeia</a></li><li><a href=\"https://al.spitaliamerikan.com/en/\" target=\"_blank\">American</a></li></ul>";
             case "do it on bold":
                 if (!string.IsNullOrEmpty(lastResponse))
                 {
