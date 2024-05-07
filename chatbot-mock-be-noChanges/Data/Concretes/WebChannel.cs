@@ -15,6 +15,7 @@ public class WebChannel : Channel
     private readonly IChannelClient _channelClient;
     private readonly IUserClient _userClient;
     private readonly IConfiguration _configuration;
+    private readonly IEventClient _eventClient;
     private readonly string adminUser = "joni-shpk";
     public WebChannel(IConfiguration configuration)
     {
@@ -23,6 +24,7 @@ public class WebChannel : Channel
       _messageClient = _factory.GetMessageClient();
       _channelClient = _factory.GetChannelClient(); // Get the Channel Client
       _userClient = _factory.GetUserClient(); // Get the Channel Client
+      _eventClient = _factory.GetEventClient(); // Get the Channel Client
     }
     public ChannelID GetID()
     {
@@ -48,7 +50,15 @@ public class WebChannel : Channel
                     {
                         Text = (string)botMessage
                     };
-                    await _messageClient.SendMessageAsync(mess.Type, mess.ChannelId, toBeSent, adminUser);
+                    
+                    
+                        var channelEventStart = new Event { Type = "typing.start", UserId = adminUser };
+                        var channelEventStop = new Event { Type = "typing.stop", UserId = adminUser };
+                        await _eventClient.SendEventAsync("messaging", mess.ChannelId, channelEventStart);
+                        await Task.Delay(2000);
+                        await _eventClient.SendEventAsync("messaging", mess.ChannelId, channelEventStop);
+
+                        await _messageClient.SendMessageAsync(mess.Type, mess.ChannelId, toBeSent, adminUser);
                 }
                 else if (botMessage is IEnumerable<string>)
                 {
@@ -60,6 +70,7 @@ public class WebChannel : Channel
                         {
                             Text = url
                         };
+                        await Task.Delay(2000);
                         await _messageClient.SendMessageAsync(mess.Type, mess.ChannelId, toBeSent, adminUser);
                     }
                 }
@@ -119,9 +130,7 @@ public class WebChannel : Channel
             default:
                 lastResponse = string.Empty;
                 break;
-        }
-
-        // If the user message contains "bold" and there's a last response, return it with bold tags
+        } 
         if (makeBold && !string.IsNullOrEmpty(lastResponse))
         {
             return $"<strong>{lastResponse}</strong>";
