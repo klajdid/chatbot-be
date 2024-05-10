@@ -1,8 +1,11 @@
+using System.Text;
 using System.Text.RegularExpressions;
 using chatbot_mock_be.Data.Enum;
 using chatbot_mock_be.Dto;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using OpenAI_API;
+using OpenAI_API.Completions;
 using StreamChat.Clients;
 using StreamChat.Models;
 
@@ -17,14 +20,19 @@ public class WebChannel : Channel
     private readonly IConfiguration _configuration;
     private readonly IEventClient _eventClient;
     private readonly string adminUser = "joni-shpk";
+    string _openAiApiKey;
+    readonly string _endpoint = "https://api.openai.com/v1/completions";
+
+    
     public WebChannel(IConfiguration configuration)
     {
         _configuration = configuration;
       _factory = new StreamClientFactory(_configuration["Configurations:ApiKey"], _configuration["Configurations:ApiSecret"]);
       _messageClient = _factory.GetMessageClient();
       _channelClient = _factory.GetChannelClient(); // Get the Channel Client
-      _userClient = _factory.GetUserClient(); // Get the Channel Client
-      _eventClient = _factory.GetEventClient(); // Get the Channel Client
+      _userClient = _factory.GetUserClient(); // Get the User Client
+      _eventClient = _factory.GetEventClient(); // Get the Event Client
+      _openAiApiKey = _configuration["Configurations:OpenAiKey"] ?? "";
     }
     public ChannelID GetID()
     {
@@ -40,11 +48,10 @@ public class WebChannel : Channel
     {
         if (mess.UserId != adminUser)
         {
-            var botMessage = BotMessage(mess.Text.ToLower());
-            if (botMessage != null)
+            // var botMessage = BotMessage(mess.Text.ToLower());
+            var botMessage = await OpenAi(mess.Text.ToLower());;
+            if (!string.IsNullOrEmpty(botMessage))
             {
-                if (botMessage is string)
-                {
                     // Sending a string message
                     var toBeSent = new MessageRequest
                     {
@@ -55,31 +62,28 @@ public class WebChannel : Channel
                         var channelEventStart = new Event { Type = "typing.start", UserId = adminUser };
                         var channelEventStop = new Event { Type = "typing.stop", UserId = adminUser };
                         await _eventClient.SendEventAsync("messaging", mess.ChannelId, channelEventStart);
-                        await Task.Delay(2000);
+                        // await Task.Delay(2000);
                         await _eventClient.SendEventAsync("messaging", mess.ChannelId, channelEventStop);
 
                         await _messageClient.SendMessageAsync(mess.Type, mess.ChannelId, toBeSent, adminUser);
-                }
-                else if (botMessage is IEnumerable<string>)
-                {
-                    // Sending a list of URLs
-                    var urls = (IEnumerable<string>)botMessage;
-                    foreach (var url in urls)
-                    {
-                        var toBeSent = new MessageRequest
-                        {
-                            Text = url
-                        };
-                        await Task.Delay(2000);
-                        await _messageClient.SendMessageAsync(mess.Type, mess.ChannelId, toBeSent, adminUser);
-                    }
-                }
+                // else if (botMessage is IEnumerable<string>)
+                // {
+                    // // Sending a list of URLs
+                    // var urls = (IEnumerable<string>)botMessage;
+                    // foreach (var url in urls)
+                    // {
+                    //     var toBeSent = new MessageRequest
+                    //     {
+                    //         Text = url
+                    //     };
+                    //     await Task.Delay(2000);
+                    //     await _messageClient.SendMessageAsync(mess.Type, mess.ChannelId, toBeSent, adminUser);
+                    // }
+                // }
             }
         }
         return new OkObjectResult(200);
     }
-
-
 
     public async Task<ActionResult> DeleteChat(ConfigurationRequestDto requestDto)
     {
@@ -139,15 +143,10 @@ public class WebChannel : Channel
         return lastResponse;
     }
 
-// Helper method to remove formatting tags from the user message
     private string RemoveFormatting(string text)
     {
-        // Define a regular expression pattern to remove HTML tags
         string pattern = @"<[^>]+>|&nbsp;";
-    
-        // Replace matches with an empty string
         string cleanedText = Regex.Replace(text, pattern, "");
-    
         return cleanedText;
     }
     public async Task<ActionResult> GetOrCreateChannelAsync(string channelType, string channelId)
@@ -163,8 +162,25 @@ public class WebChannel : Channel
             return new BadRequestObjectResult("Failed to access or create the channel");
         }
     }
-    
 
+    private async Task<string> OpenAi(string userMessage)
+    {
+        if (userMessage.Equals("firstmessage"))
+        {
+            return "Hello there from DATAWIZ";
+        }
+        string outputResult = "";
+        var openai = new OpenAIAPI(_openAiApiKey);
+        CompletionRequest completionRequest = new CompletionRequest();
+        completionRequest.Prompt = userMessage;
+        completionRequest.MaxTokens = 1024;
 
+        var completions = await openai.Completions.CreateCompletionAsync(completionRequest);
 
+        foreach (var completion in completions.Completions)
+        {
+            outputResult += completion.Text;
+        }
+        return outputResult;
+    }
 }
