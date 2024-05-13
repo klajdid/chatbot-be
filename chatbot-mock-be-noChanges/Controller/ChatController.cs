@@ -11,7 +11,6 @@ public class ChatController : ControllerBase
     private readonly Channel _channel;
     private readonly ConfigService _config;
 
-
     public ChatController(Channel channel, ConfigService config)
     {
         _channel = channel;
@@ -53,7 +52,6 @@ public class ChatController : ControllerBase
             string messageId = request.MessageId;
             Console.WriteLine(messageId);
         }
-            
         return Ok();
     }
     public class GetStreamEvent

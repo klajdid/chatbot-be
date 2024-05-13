@@ -8,14 +8,12 @@ namespace chatbot_mock_be.Data.Concretes;
 public class GetStreamClient : IGetStreamClient
 {
     private readonly HttpClient _httpClient;
-
     public GetStreamClient(HttpClient httpClient)
     {
         _httpClient = httpClient;
         _httpClient = new HttpClient();
 
     }
-    
 
     public async Task<ActionResult> CreateChannelAsync(string channelId, string channelType, string userId)
     {

@@ -21,6 +21,10 @@ public class ConfigService
         _userClient = _factory.GetUserClient();
     }
 
+    //Is called every time the chats loads and returns all the data
+    //for the new or existing user, channel so that the chat can be loaded normally in the UI.
+    //It requires a ConfigurationDto as a parameter with UserId and ChannelId properties so that 
+    //the difference between an existing and new chat can be made.
     public async Task<ConfigurationDto> GetConfigData(ConfigurationRequestDto configReq)
     {
         ConfigurationDto configurationDto;

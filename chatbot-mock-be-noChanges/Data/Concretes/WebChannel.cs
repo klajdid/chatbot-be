@@ -1,8 +1,6 @@
-using System.Text;
 using System.Text.RegularExpressions;
 using chatbot_mock_be.Data.Enum;
 using chatbot_mock_be.Dto;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using OpenAI_API;
 using OpenAI_API.Completions;
@@ -25,8 +23,8 @@ public class WebChannel : Channel
 
     
     public WebChannel(IConfiguration configuration)
-    {
-        _configuration = configuration;
+    { 
+      _configuration = configuration;
       _factory = new StreamClientFactory(_configuration["Configurations:ApiKey"], _configuration["Configurations:ApiSecret"]);
       _messageClient = _factory.GetMessageClient();
       _channelClient = _factory.GetChannelClient(); // Get the Channel Client
@@ -44,11 +42,12 @@ public class WebChannel : Channel
         throw new NotImplementedException();
     }
 
+    //Receives a message and handles the response that will be sent to chat which will be shown in the UI.
+    //Requires a Message object as parameter with Type, Text, UserId, ChannelId properties.
     public async Task<ActionResult> ReceiveMessage(Message mess)
     {
         if (mess.UserId != adminUser)
         {
-            // var botMessage = BotMessage(mess.Text.ToLower());
             var botMessage = await OpenAi(mess.Text.ToLower());;
             if (!string.IsNullOrEmpty(botMessage))
             {
@@ -57,8 +56,6 @@ public class WebChannel : Channel
                     {
                         Text = (string)botMessage
                     };
-                    
-                    
                         var channelEventStart = new Event { Type = "typing.start", UserId = adminUser };
                         var channelEventStop = new Event { Type = "typing.stop", UserId = adminUser };
                         await _eventClient.SendEventAsync("messaging", mess.ChannelId, channelEventStart);
@@ -66,25 +63,14 @@ public class WebChannel : Channel
                         await _eventClient.SendEventAsync("messaging", mess.ChannelId, channelEventStop);
 
                         await _messageClient.SendMessageAsync(mess.Type, mess.ChannelId, toBeSent, adminUser);
-                // else if (botMessage is IEnumerable<string>)
-                // {
-                    // // Sending a list of URLs
-                    // var urls = (IEnumerable<string>)botMessage;
-                    // foreach (var url in urls)
-                    // {
-                    //     var toBeSent = new MessageRequest
-                    //     {
-                    //         Text = url
-                    //     };
-                    //     await Task.Delay(2000);
-                    //     await _messageClient.SendMessageAsync(mess.Type, mess.ChannelId, toBeSent, adminUser);
-                    // }
-                // }
             }
         }
         return new OkObjectResult(200);
     }
 
+    //Delete channel and user in the chat.
+    //Requires a ConfigurationDto with UserId, ChannelId properties.
+    //When the chat closes there should not be any data for this specific chat so it should be deleted.
     public async Task<ActionResult> DeleteChat(ConfigurationRequestDto requestDto)
     {
         if (!string.IsNullOrEmpty(requestDto.UserId))
@@ -103,6 +89,7 @@ public class WebChannel : Channel
 
     private static string lastResponse = string.Empty;
 
+    //Handles the static bot message returning a specific response in base of the message that the user has entered.
     private Object BotMessage(string userMessage)
     {
         // Check if the user message requests the response to be in bold
@@ -163,6 +150,7 @@ public class WebChannel : Channel
         }
     }
 
+    //Makes the call to the openAi so that the response should be generated form openAi source.
     private async Task<string> OpenAi(string userMessage)
     {
         if (userMessage.Equals("firstmessage"))
@@ -174,9 +162,7 @@ public class WebChannel : Channel
         CompletionRequest completionRequest = new CompletionRequest();
         completionRequest.Prompt = userMessage;
         completionRequest.MaxTokens = 1024;
-
         var completions = await openai.Completions.CreateCompletionAsync(completionRequest);
-
         foreach (var completion in completions.Completions)
         {
             outputResult += completion.Text;
