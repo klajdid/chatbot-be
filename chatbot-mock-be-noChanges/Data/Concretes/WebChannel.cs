@@ -1,7 +1,9 @@
 using System.Text.RegularExpressions;
+using chatbot_mock_be.AssistantApiManager;
 using chatbot_mock_be.Data.Enum;
 using chatbot_mock_be.Dto;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json.Linq;
 using OpenAI_API;
 using OpenAI_API.Completions;
 using StreamChat.Clients;
@@ -18,6 +20,7 @@ public class WebChannel : Channel
     private readonly IConfiguration _configuration;
     private readonly IEventClient _eventClient;
     private readonly string adminUser = "joni-shpk";
+    private AssistantApiClient assistantApiClient;
     string _openAiApiKey;
     readonly string _endpoint = "https://api.openai.com/v1/completions";
 
@@ -31,6 +34,7 @@ public class WebChannel : Channel
       _userClient = _factory.GetUserClient(); // Get the User Client
       _eventClient = _factory.GetEventClient(); // Get the Event Client
       _openAiApiKey = _configuration["Configurations:OpenAiKey"] ?? "";
+      assistantApiClient = new AssistantApiClient(_openAiApiKey);
     }
     public ChannelID GetID()
     {
@@ -48,7 +52,7 @@ public class WebChannel : Channel
     {
         if (mess.UserId != adminUser)
         {
-            var botMessage = await OpenAi(mess.Text.ToLower());;
+            var botMessage = await OpenAi(mess.Text.ToLower(), mess.ChannelId);;
             if (!string.IsNullOrEmpty(botMessage))
             {
                     // Sending a string message
@@ -56,11 +60,7 @@ public class WebChannel : Channel
                     {
                         Text = (string)botMessage
                     };
-                        var channelEventStart = new Event { Type = "typing.start", UserId = adminUser };
-                        var channelEventStop = new Event { Type = "typing.stop", UserId = adminUser };
-                        await _eventClient.SendEventAsync("messaging", mess.ChannelId, channelEventStart);
-                        // await Task.Delay(2000);
-                        await _eventClient.SendEventAsync("messaging", mess.ChannelId, channelEventStop);
+                    
 
                         await _messageClient.SendMessageAsync(mess.Type, mess.ChannelId, toBeSent, adminUser);
             }
@@ -151,22 +151,38 @@ public class WebChannel : Channel
     }
 
     //Makes the call to the openAi so that the response should be generated form openAi source.
-    private async Task<string> OpenAi(string userMessage)
+    private async Task<string> OpenAi(string userMessage, string channelId)
     {
+        String assistantId = "asst_pDNovwxYdGDcpspw3j58UYAl";
+        String threadId = "thread_no4Jy1P2x9BoNYH2ugrrtHz5";
         if (userMessage.Equals("firstmessage"))
         {
             return "Hello there from DATAWIZ";
         }
         string outputResult = "";
-        var openai = new OpenAIAPI(_openAiApiKey);
-        CompletionRequest completionRequest = new CompletionRequest();
-        completionRequest.Prompt = userMessage;
-        completionRequest.MaxTokens = 1024;
-        var completions = await openai.Completions.CreateCompletionAsync(completionRequest);
-        foreach (var completion in completions.Completions)
+        string status = "";
+        var runId = await assistantApiClient.AskAssistant(threadId, assistantId, userMessage);
+        do
         {
-            outputResult += completion.Text;
+            var channelEventStart = new Event { Type = "typing.start", UserId = adminUser };
+            await _eventClient.SendEventAsync("messaging", channelId, channelEventStart);
+            // await Task.Delay(2000);
+            status = await assistantApiClient.CheckStatus(threadId, runId);
         }
+        while (!status.Equals("completed") && !status.Equals("failed"));
+        if (status.Equals("completed"))
+        {
+            var channelEventStop = new Event { Type = "typing.stop", UserId = adminUser };
+            await _eventClient.SendEventAsync("messaging", channelId, channelEventStop);
+            var result = await assistantApiClient.GetResults(threadId);//quando mi devo vaccinare per l'epatite?
+            var jsonObject = JObject.Parse(result.ToString());
+
+            outputResult = (string)jsonObject["data"][0]["content"][0]["text"]["value"];
+            Console.WriteLine(outputResult); 
+        }
+        else
+            Console.WriteLine("Something went wrong!");
+        
         return outputResult;
     }
 }

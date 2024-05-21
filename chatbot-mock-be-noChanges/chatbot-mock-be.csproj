@@ -8,6 +8,8 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="Azure.AI.OpenAI" Version="1.0.0-beta.17" />
+      <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
       <PackageReference Include="OpenAI" Version="1.11.0" />
       <PackageReference Include="stream-chat-net" Version="2.5.0" />
       <PackageReference Include="stream-net" Version="6.8.1" />
