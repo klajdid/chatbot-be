@@ -1,3 +1,4 @@
+using chatbot_mock_be.AssistantApiManager;
 using chatbot_mock_be.Dto;
 using StreamChat.Clients;
 using StreamChat.Models;
@@ -11,6 +12,7 @@ public class ConfigService
     private readonly IMessageClient _messageClient;
     private readonly IChannelClient _channelClient;
     private readonly IUserClient _userClient;
+    private readonly AssistantApiClient assistantApiClient;
 
     public ConfigService(IConfiguration configuration)
     {
@@ -19,6 +21,7 @@ public class ConfigService
         _messageClient = _factory.GetMessageClient();
         _channelClient = _factory.GetChannelClient();
         _userClient = _factory.GetUserClient();
+        assistantApiClient = new AssistantApiClient(_configuration["Configurations:OpenAiKey"] ?? "");
     }
 
     //Is called every time the chats loads and returns all the data
@@ -46,7 +49,8 @@ public class ConfigService
                 ChannelId = configReq.ChannelId,
                 UserId = configReq.UserId,
                 ChatType = "messaging",
-                UserToken = token
+                UserToken = token,
+                AssistantThread = configReq.AssistantThread
             };
         }
         else
@@ -61,13 +65,15 @@ public class ConfigService
                 Data = chanData,
             });
             token = _userClient.CreateToken(userId);
+            var assistantThread = await assistantApiClient.CreateThread("asst_pDNovwxYdGDcpspw3j58UYAl");
             configurationDto = new ConfigurationDto
             {
                 ApiKey = _configuration["Configurations:ApiKey"] ?? "",
                 ChannelId = channelId,
                 UserId = userId,
                 ChatType = "messaging",
-                UserToken = token
+                UserToken = token,
+                AssistantThread = assistantThread
             };
         }
 

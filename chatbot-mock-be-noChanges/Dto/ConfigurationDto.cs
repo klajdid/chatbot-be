@@ -7,6 +7,7 @@ public class ConfigurationDto
     public string UserId { get; set; }
     public string ChatType { get; set; }
     public string UserToken { get; set; }
+    public string? AssistantThread { get; set; }
 
     // public ConfigurationDto(string apiKey, string channelId, string userId, string userName, string userToken)
     // {

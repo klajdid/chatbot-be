@@ -22,6 +22,7 @@ public class WebChannel : Channel
     private readonly string adminUser = "joni-shpk";
     private AssistantApiClient assistantApiClient;
     string _openAiApiKey;
+    private bool useAssistant = true;
     readonly string _endpoint = "https://api.openai.com/v1/completions";
 
     
@@ -52,7 +53,7 @@ public class WebChannel : Channel
     {
         if (mess.UserId != adminUser)
         {
-            var botMessage = await OpenAi(mess.Text.ToLower(), mess.ChannelId);;
+            var botMessage = useAssistant ? await AssistantOpenAi(mess.Text.ToLower(), mess.ChannelId, mess.assistantThread) : await CompletionOpenAi(mess.Text.ToLower());
             if (!string.IsNullOrEmpty(botMessage))
             {
                     // Sending a string message
@@ -151,38 +152,56 @@ public class WebChannel : Channel
     }
 
     //Makes the call to the openAi so that the response should be generated form openAi source.
-    private async Task<string> OpenAi(string userMessage, string channelId)
+    private async Task<string> AssistantOpenAi(string userMessage, string channelId, string assistantThread)
     {
         String assistantId = "asst_pDNovwxYdGDcpspw3j58UYAl";
-        String threadId = "thread_no4Jy1P2x9BoNYH2ugrrtHz5";
         if (userMessage.Equals("firstmessage"))
         {
             return "Hello there from DATAWIZ";
         }
         string outputResult = "";
         string status = "";
-        var runId = await assistantApiClient.AskAssistant(threadId, assistantId, userMessage);
+        var runId = await assistantApiClient.AskAssistant(assistantThread, assistantId, userMessage);
         do
         {
             var channelEventStart = new Event { Type = "typing.start", UserId = adminUser };
             await _eventClient.SendEventAsync("messaging", channelId, channelEventStart);
             // await Task.Delay(2000);
-            status = await assistantApiClient.CheckStatus(threadId, runId);
+            status = await assistantApiClient.CheckStatus(assistantThread, runId);
         }
         while (!status.Equals("completed") && !status.Equals("failed"));
         if (status.Equals("completed"))
         {
             var channelEventStop = new Event { Type = "typing.stop", UserId = adminUser };
             await _eventClient.SendEventAsync("messaging", channelId, channelEventStop);
-            var result = await assistantApiClient.GetResults(threadId);//quando mi devo vaccinare per l'epatite?
+            var result = await assistantApiClient.GetResults(assistantThread);//quando mi devo vaccinare per l'epatite?
             var jsonObject = JObject.Parse(result.ToString());
 
             outputResult = (string)jsonObject["data"][0]["content"][0]["text"]["value"];
-            Console.WriteLine(outputResult); 
+            Console.WriteLine("Assistant: " + outputResult); 
         }
         else
             Console.WriteLine("Something went wrong!");
         
+        return outputResult;
+    }
+    
+     private async Task<string> CompletionOpenAi(string userMessage)
+    {
+        if (userMessage.Equals("firstmessage"))
+        {
+            return "Hello there from DATAWIZ";
+        }
+        string outputResult = "";
+        var openai = new OpenAIAPI(_openAiApiKey);
+        CompletionRequest completionRequest = new CompletionRequest();
+        completionRequest.Prompt = userMessage;
+        completionRequest.MaxTokens = 1024;
+        var completions = await openai.Completions.CreateCompletionAsync(completionRequest);
+        foreach (var completion in completions.Completions)
+            outputResult += completion.Text;
+        
+        Console.WriteLine("Completions: "+ outputResult);
         return outputResult;
     }
 }
