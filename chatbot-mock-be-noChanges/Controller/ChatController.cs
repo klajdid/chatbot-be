@@ -1,5 +1,4 @@
 using chatbot_mock_be.Data;
-using chatbot_mock_be.Data.Concretes;
 using chatbot_mock_be.Dto;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,12 +8,10 @@ namespace chatbot_mock_be.Controller;
 public class ChatController : ControllerBase
 {
     private readonly Channel _channel;
-    private readonly ConfigService _config;
 
-    public ChatController(Channel channel, ConfigService config)
+    public ChatController(Channel channel)
     {
         _channel = channel;
-        _config = config;
     }
 
     [HttpPost("Message-Management")]
@@ -26,7 +23,7 @@ public class ChatController : ControllerBase
     [HttpPost("initialize-chat")]
     public async Task<ActionResult> InitializeChat([FromBody] ConfigurationRequestDto configReq)
     {
-        var configData = await _config.GetConfigData(configReq);
+        var configData = await _channel.BeginConversation(configReq);
         return Ok(configData);
     }
     

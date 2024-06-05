@@ -1,15 +1,13 @@
-using System.Text.RegularExpressions;
 using chatbot_mock_be.AssistantApiManager;
+using chatbot_mock_be.BotResponses.AssistantApiManager.AssistantApiImplementation;
+using chatbot_mock_be.BotResponses.OpenAiCompletionImplementation;
 using chatbot_mock_be.Data.Enum;
 using chatbot_mock_be.Dto;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json.Linq;
-using OpenAI_API;
-using OpenAI_API.Completions;
 using StreamChat.Clients;
 using StreamChat.Models;
 
-namespace chatbot_mock_be.Data.Interfaces;
+namespace chatbot_mock_be.Data.Concretes;
 
 public class WebChannel : Channel
 {
@@ -22,7 +20,7 @@ public class WebChannel : Channel
     private readonly string adminUser = "joni-shpk";
     private AssistantApiClient assistantApiClient;
     string _openAiApiKey;
-    private bool useAssistant = true;
+    private bool useAssistant = false;
     readonly string _endpoint = "https://api.openai.com/v1/completions";
 
     
@@ -42,18 +40,20 @@ public class WebChannel : Channel
         throw new NotImplementedException();
     }
 
-    public TypeEnum GetType()
-    {
+    public TypeEnum GetType() =>
         throw new NotImplementedException();
-    }
-
+    
     //Receives a message and handles the response that will be sent to chat which will be shown in the UI.
     //Requires a Message object as parameter with Type, Text, UserId, ChannelId properties.
     public async Task<ActionResult> ReceiveMessage(Message mess)
     {
+        var assistantService = new AssistantAiService(_eventClient, _configuration);
+        var openAiService = new OpenAiBotService(_configuration);
         if (mess.UserId != adminUser)
         {
-            var botMessage = useAssistant ? await AssistantOpenAi(mess.Text.ToLower(), mess.ChannelId, mess.assistantThread) : await CompletionOpenAi(mess.Text.ToLower());
+            var botMessage = useAssistant ?
+                    await assistantService.AssistantOpenAiResponse(mess.Text.ToLower(), mess.ChannelId, mess.assistantThread)
+                : await openAiService.CompletionOpenAiResponse(mess.Text.ToLower());
             if (!string.IsNullOrEmpty(botMessage))
             {
                     // Sending a string message
@@ -61,12 +61,62 @@ public class WebChannel : Channel
                     {
                         Text = (string)botMessage
                     };
-                    
-
-                        await _messageClient.SendMessageAsync(mess.Type, mess.ChannelId, toBeSent, adminUser);
+                await _messageClient.SendMessageAsync(mess.Type, mess.ChannelId, toBeSent, adminUser);
             }
         }
         return new OkObjectResult(200);
+    }
+
+    public async Task<ConfigurationDto> BeginConversation(ConfigurationRequestDto configReq)
+    {
+        ConfigurationDto configurationDto;
+        ChannelRequest chanData;
+        string token;
+        string userId;
+        string channelId;
+        if (!string.IsNullOrEmpty(configReq.UserId) && !string.IsNullOrEmpty(configReq.ChannelId))
+        {
+            chanData = new ChannelRequest { CreatedBy = new UserRequest { Id = configReq.UserId } };
+            await _channelClient.GetOrCreateAsync("messaging", configReq.ChannelId, new ChannelGetRequest
+            {
+                Data = chanData,
+            });
+            token = _userClient.CreateToken(configReq.UserId);
+            configurationDto = new ConfigurationDto
+            {
+                ApiKey = _configuration["Configurations:ApiKey"] ?? "",
+                ChannelId = configReq.ChannelId,
+                UserId = configReq.UserId,
+                ChatType = "messaging",
+                UserToken = token,
+                AssistantThread = configReq.AssistantThread
+            };
+        }
+        else
+        {
+            Guid userGuid = Guid.NewGuid();
+            Guid channelGuid = Guid.NewGuid();
+            userId = userGuid.ToString();
+            channelId = channelGuid.ToString();
+            chanData = new ChannelRequest { CreatedBy = new UserRequest { Id = userId } };
+            await _channelClient.GetOrCreateAsync("messaging", userId, new ChannelGetRequest
+            {
+                Data = chanData,
+            });
+            token = _userClient.CreateToken(userId);
+            var assistantThread = await assistantApiClient.CreateThread(_configuration["Configurations:ApiKey"] ?? "");
+            configurationDto = new ConfigurationDto
+            {
+                ApiKey = _configuration["Configurations:ApiKey"] ?? "",
+                ChannelId = channelId,
+                UserId = userId,
+                ChatType = "messaging",
+                UserToken = token,
+                AssistantThread = assistantThread
+            };
+        }
+
+        return configurationDto;
     }
 
     //Delete channel and user in the chat.
@@ -83,60 +133,8 @@ public class WebChannel : Channel
         return new OkObjectResult(200);
     }
 
-    public Message SendMessage()
-    {
-        return new Message();
-    }
+    public Message SendMessage() => new Message();
 
-    private static string lastResponse = string.Empty;
-
-    //Handles the static bot message returning a specific response in base of the message that the user has entered.
-    private Object BotMessage(string userMessage)
-    {
-        // Check if the user message requests the response to be in bold
-        bool makeBold = userMessage.ToLower().Contains("bold");
-
-        // Remove any formatting tags from the user message
-        string cleanUserMessage = RemoveFormatting(userMessage);
-
-        switch (cleanUserMessage)
-        {
-            case "hello":
-                lastResponse = "Hello, how can I assist you?";
-                break;
-            case "my head hurts":
-                lastResponse = "I'm sorry to hear that your head hurts. Headaches can be really uncomfortable. Have you tried anything to relieve it, like drinking water, resting in a quiet and dark room, or maybe taking some pain relief medication? If it persists or gets worse, it might be a good idea to consult a healthcare professional.";
-                break;
-            case "show me the list of hospitals test":
-                return new List<string>() { "https://al.spitaliamerikan.com/en/","https://al.spitaliamerikan.com/en/" };
-            case "show me the list of hospitals":
-                return $"<ul><li><a href=\"https://salus.al/?lang=en\" target=\"_blank\">Salus</a></li><li><a href=\"https://hygeia.al/\" target=\"_blank\">Hygeia</a></li><li><a href=\"https://al.spitaliamerikan.com/en/\" target=\"_blank\">American</a></li></ul>";
-            case "do it on bold":
-                if (!string.IsNullOrEmpty(lastResponse))
-                {
-                    return $"<strong>{lastResponse}</strong>";
-                }
-                return "No previous message to bold.";
-            case "firstmessage":
-                return "Hello there from DATAWIZ";
-            default:
-                lastResponse = string.Empty;
-                break;
-        } 
-        if (makeBold && !string.IsNullOrEmpty(lastResponse))
-        {
-            return $"<strong>{lastResponse}</strong>";
-        }
-
-        return lastResponse;
-    }
-
-    private string RemoveFormatting(string text)
-    {
-        string pattern = @"<[^>]+>|&nbsp;";
-        string cleanedText = Regex.Replace(text, pattern, "");
-        return cleanedText;
-    }
     public async Task<ActionResult> GetOrCreateChannelAsync(string channelType, string channelId)
     {
         try
@@ -149,59 +147,5 @@ public class WebChannel : Channel
             Console.WriteLine($"Error accessing or creating the channel: {ex.Message}");
             return new BadRequestObjectResult("Failed to access or create the channel");
         }
-    }
-
-    //Makes the call to the openAi so that the response should be generated form openAi source.
-    private async Task<string> AssistantOpenAi(string userMessage, string channelId, string assistantThread)
-    {
-        String assistantId = "asst_pDNovwxYdGDcpspw3j58UYAl";
-        if (userMessage.Equals("firstmessage"))
-        {
-            return "Hello there from DATAWIZ";
-        }
-        string outputResult = "";
-        string status = "";
-        var runId = await assistantApiClient.AskAssistant(assistantThread, assistantId, userMessage);
-        do
-        {
-            var channelEventStart = new Event { Type = "typing.start", UserId = adminUser };
-            await _eventClient.SendEventAsync("messaging", channelId, channelEventStart);
-            // await Task.Delay(2000);
-            status = await assistantApiClient.CheckStatus(assistantThread, runId);
-        }
-        while (!status.Equals("completed") && !status.Equals("failed"));
-        if (status.Equals("completed"))
-        {
-            var channelEventStop = new Event { Type = "typing.stop", UserId = adminUser };
-            await _eventClient.SendEventAsync("messaging", channelId, channelEventStop);
-            var result = await assistantApiClient.GetResults(assistantThread);//quando mi devo vaccinare per l'epatite?
-            var jsonObject = JObject.Parse(result.ToString());
-
-            outputResult = (string)jsonObject["data"][0]["content"][0]["text"]["value"];
-            Console.WriteLine("Assistant: " + outputResult); 
-        }
-        else
-            Console.WriteLine("Something went wrong!");
-        
-        return outputResult;
-    }
-    
-     private async Task<string> CompletionOpenAi(string userMessage)
-    {
-        if (userMessage.Equals("firstmessage"))
-        {
-            return "Hello there from DATAWIZ";
-        }
-        string outputResult = "";
-        var openai = new OpenAIAPI(_openAiApiKey);
-        CompletionRequest completionRequest = new CompletionRequest();
-        completionRequest.Prompt = userMessage;
-        completionRequest.MaxTokens = 1024;
-        var completions = await openai.Completions.CreateCompletionAsync(completionRequest);
-        foreach (var completion in completions.Completions)
-            outputResult += completion.Text;
-        
-        Console.WriteLine("Completions: "+ outputResult);
-        return outputResult;
     }
 }

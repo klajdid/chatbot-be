@@ -1,6 +1,5 @@
 using chatbot_mock_be.Data;
 using chatbot_mock_be.Data.Concretes;
-using chatbot_mock_be.Data.Interfaces;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,7 +15,6 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddScoped<IGetStreamClient, GetStreamClient>();
 builder.Services.AddScoped<Channel, WebChannel>();
-builder.Services.AddScoped<ConfigService>();
 
 
 builder.Services.AddCors(options =>

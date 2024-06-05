@@ -9,6 +9,7 @@ public interface Channel {
     ChannelID GetID();
     TypeEnum GetType();
     Task<ActionResult> ReceiveMessage(Message mess);
+    Task<ConfigurationDto> BeginConversation (ConfigurationRequestDto configReq);
     Task<ActionResult> DeleteChat(ConfigurationRequestDto requestDto);
     Message SendMessage();
 }
