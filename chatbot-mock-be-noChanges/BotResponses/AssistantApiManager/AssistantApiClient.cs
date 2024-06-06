@@ -3,7 +3,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace chatbot_mock_be.AssistantApiManager;
+namespace chatbot_mock_be.BotResponses.AssistantApiManager;
 
 public class AssistantApiClient
 {
@@ -84,7 +84,6 @@ public class AssistantApiClient
 
         var content = new StringContent(JsonConvert.SerializeObject(messageData), Encoding.UTF8, "application/json");
         var response = await _httpClient.PostAsync($"https://api.openai.com/v1/threads/{threadId}/messages", content);
-        // var response = await _httpClient.PostAsync("https://api.openai.com/v1/threads", null);
         var responseContent = await response.Content.ReadAsStringAsync();
         JObject result = (JObject)JsonConvert.DeserializeObject(responseContent);
 
@@ -105,7 +104,6 @@ public class AssistantApiClient
     {
         HttpResponseMessage response = await _httpClient.GetAsync($"https://api.openai.com/v1/threads/{threadId}/messages");
         var responseContent = await response.Content.ReadAsStringAsync();
-        // Console.WriteLine(responseContent);
         return (JObject)JsonConvert.DeserializeObject(responseContent);
     }
 }
