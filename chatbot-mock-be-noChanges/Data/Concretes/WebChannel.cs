@@ -12,24 +12,17 @@ namespace chatbot_mock_be.Data.Concretes;
 
 public class WebChannel : Channel
 {
-    private readonly StreamClientFactory _factory;
-    private readonly IMessageClient _messageClient;
     private readonly IChannelClient _channelClient;
     private readonly IUserClient _userClient;
-    private readonly IConfiguration _configuration;
     private readonly IEventClient _eventClient;
-    private readonly string adminUser = "joni-shpk";
     private AssistantApiClient assistantApiClient;
     string _openAiApiKey;
     private bool useAssistant = true;
     readonly string _endpoint = "https://api.openai.com/v1/completions";
 
     
-    public WebChannel(IConfiguration configuration)
+    public WebChannel()
     { 
-      _configuration = configuration;
-      _factory = new StreamClientFactory(_configuration["Configurations:ApiKey"], _configuration["Configurations:ApiSecret"]);
-      _messageClient = _factory.GetMessageClient();
       _channelClient = _factory.GetChannelClient(); // Get the Channel Client
       _userClient = _factory.GetUserClient(); // Get the User Client
       _eventClient = _factory.GetEventClient(); // Get the Event Client
@@ -41,8 +34,17 @@ public class WebChannel : Channel
     
     //Receives a message and handles the response that will be sent to chat which will be shown in the UI.
     //Requires a Message object as parameter with Type, Text, UserId, ChannelId properties.
-    public async Task<ActionResult> ReceiveMessage(MessageDto mess)
+    public override async Task ReceiveMessage(MessageDto mess)
     {
+        if (mess.Text.Equals("firstMessage"))
+        {
+            await SendMessageAsync(new MessageDto(){ChannelId = mess.ChannelId, 
+                UserId = mess.UserId,
+                assistantThread = mess.assistantThread,
+                Text = "Hello there from DATAWIZ",
+                Type = "messaging"});
+            return;
+        }
         var assistantService = new AssistantAiService(_eventClient, _configuration);
         var openAiService = new OpenAiBotService(_configuration);
         if (mess.UserId != adminUser)
@@ -60,10 +62,9 @@ public class WebChannel : Channel
                 await _messageClient.SendMessageAsync(mess.Type, mess.ChannelId, toBeSent, adminUser);
             }
         }
-        return new OkObjectResult(200);
     }
 
-    public async Task<ConfigurationDto> BeginConversation(ConfigurationRequestDto configReq)
+    public override async Task<ConfigurationDto> BeginConversation(ConfigurationRequestDto configReq)
     {
         ConfigurationDto configurationDto;
         ChannelRequest chanData;
@@ -87,6 +88,7 @@ public class WebChannel : Channel
                 UserToken = token,
                 AssistantThread = configReq.AssistantThread
             };
+  
         }
         else
         {
@@ -118,15 +120,13 @@ public class WebChannel : Channel
     //Delete channel and user in the chat.
     //Requires a ConfigurationDto with UserId, ChannelId properties.
     //When the chat closes there should not be any data for this specific chat so it should be deleted.
-    public async Task<ActionResult> DeleteChat(ConfigurationRequestDto requestDto)
+    public override async Task DeleteChat(ConfigurationRequestDto requestDto)
     {
         if (!string.IsNullOrEmpty(requestDto.UserId))
             await _userClient.DeleteAsync(requestDto.UserId, markMessagesDeleted: true, hardDelete: true, deleteConversations: true);
 
         if (!string.IsNullOrEmpty(requestDto.ChannelId))
             await _channelClient.DeleteAsync("messaging", requestDto.ChannelId);
-
-        return new OkObjectResult(200);
     }
 
     public MessageDto SendMessage() => new MessageDto();

@@ -16,9 +16,9 @@ public class ChatController : ControllerBase
     }
 
     [HttpPost("Message-Management")]
-    public async Task<ActionResult> MessageManagement([FromBody] MessageDto messageDto)
-    {
-        return await _channel.ReceiveMessage(messageDto);
+    public async Task MessageManagement([FromBody] MessageDto messageDto)
+    { 
+        await _channel.ReceiveMessage(messageDto);
     }
     
     [HttpPost("initialize-chat")]
@@ -36,9 +36,9 @@ public class ChatController : ControllerBase
     }
     
     [HttpPost("start-chat")]
-    public async Task<ActionResult>  StartChat([FromBody] MessageDto messageDto)
+    public async Task StartChat([FromBody] MessageDto messageDto)
     {
-        return await _channel.ReceiveMessage(messageDto);
+         await _channel.ReceiveMessage(messageDto);
     }
     
     [HttpPost("/webhooks/getstream")]

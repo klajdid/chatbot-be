@@ -22,10 +22,6 @@ public class AssistantAiService
     public async Task<string> AssistantOpenAiResponse(string userMessage, string channelId, string assistantThread)
     {
         String assistantId = _configuration["Configurations:AssistantId"] ?? "";
-        if (userMessage.Equals("firstmessage"))
-        {
-            return "Hello there from DATAWIZ";
-        }
         string outputResult = "";
         string status = "";
         var runId = await assistantApiClient.AskAssistant(assistantThread, assistantId, userMessage);
