@@ -42,7 +42,7 @@ public class AssistantAiService
 
             outputResult = (string)jsonObject["data"][0]["content"][0]["text"]["value"];
             Console.WriteLine("Assistant: " + outputResult); 
-        }
+        } 
         else
             Console.WriteLine("Something went wrong!");
         
